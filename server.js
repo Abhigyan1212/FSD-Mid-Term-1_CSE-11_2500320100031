@@ -42,6 +42,18 @@ app.get("/api/books", (req, res) => {
     }
     res.status(200).json(books);
 });
+app.get("/api/books/search", (req, res) => {
+    const search = (req.query.q || "").toLowerCase();
+    const result = books.filter(book =>
+        book.title.toLowerCase().includes(search) ||
+        book.author.toLowerCase().includes(search) ||
+        book.genre.toLowerCase().includes(search)
+    );
+    res.status(200).json({
+        message: "Search results",
+        books: result
+    });
+});
 app.get("/api/books/:id", (req, res) => {
     const id = Number(req.params.id);
     const book = books.find(b => b.id === id);
@@ -99,6 +111,62 @@ app.put("/api/books/:id", (req, res) => {
     }
     res.status(200).json({
         message: "Book updated successfully",
+        book: book
+    });
+});
+app.delete("/api/books/:id", (req, res) => {
+    const id = Number(req.params.id);
+    const index = books.findIndex(b => b.id === id);
+    if (index === -1) {
+        return res.status(404).json({
+            message: "Book not found"
+        });
+    }
+    if (books[index].availableCopies !== books[index].totalCopies) {
+        return res.status(400).json({
+            message: "Cannot delete book while copies are issued"
+        });
+    }
+    books.splice(index, 1);
+    res.status(200).json({
+        message: "Book deleted successfully"
+    });
+});
+app.post("/api/books/:id/issue", (req, res) => {
+    const id = Number(req.params.id);
+    const book = books.find(b => b.id === id);
+    if (!book) {
+        return res.status(404).json({
+            message: "Book not found"
+        });
+    }
+    if (book.availableCopies <= 0) {
+        return res.status(400).json({
+            message: "No copies available"
+        });
+    }
+    book.availableCopies--;
+    res.status(200).json({
+        message: "Book issued successfully",
+        book: book
+    });
+});
+app.post("/api/books/:id/return", (req, res) => {
+    const id = Number(req.params.id);
+    const book = books.find(b => b.id === id);
+    if (!book) {
+        return res.status(404).json({
+            message: "Book not found"
+        });
+    }
+    if (book.availableCopies >= book.totalCopies) {
+        return res.status(400).json({
+            message: "All copies are already returned"
+        });
+    }
+    book.availableCopies++;
+    res.status(200).json({
+        message: "Book returned successfully",
         book: book
     });
 });
